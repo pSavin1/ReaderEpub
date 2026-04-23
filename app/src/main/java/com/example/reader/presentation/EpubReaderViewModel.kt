@@ -1,6 +1,7 @@
 package com.example.reader.presentation
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.reader.domain.usecase.CloseBookUseCase
@@ -37,6 +38,7 @@ class EpubReaderViewModel @Inject constructor(
                 progress = locator.locations.totalProgression ?: 0.0,
             )
         }
+        Log.d(LOG_TAG, "Page changed")
         savePageUseCase(locator)
     }
 
@@ -44,6 +46,7 @@ class EpubReaderViewModel @Inject constructor(
         _state.update {
             it.copy(isLoading = true)
         }
+        Log.d(LOG_TAG, "Book loading started")
         val bookFile = try {
             val file = File(context.filesDir, fileName)
             if (!file.exists()) {
@@ -53,8 +56,10 @@ class EpubReaderViewModel @Inject constructor(
                     }
                 }
             }
+            Log.d(LOG_TAG, "Book file loaded")
             file
         } catch (_: Exception) {
+            Log.e(LOG_TAG, "Book loading error")
             _state.update {
                 it.copy(isError = true)
             }
@@ -63,6 +68,7 @@ class EpubReaderViewModel @Inject constructor(
 
         viewModelScope.launch {
             loadBookUseCase(bookFile).collect { publication ->
+                Log.d(LOG_TAG, "Book file parsed")
                 _state.update {
                     it.copy(
                         publication = publication,
@@ -71,6 +77,7 @@ class EpubReaderViewModel @Inject constructor(
             }
             try {
                 val locator = getPageUseCase()
+                Log.d(LOG_TAG, "Page loaded")
                 _state.update {
                     it.copy(
                         initialLocator = locator,
@@ -78,6 +85,7 @@ class EpubReaderViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Log.d(LOG_TAG, "Page loading error")
                 e.printStackTrace()
             }
             _state.update {
@@ -88,5 +96,10 @@ class EpubReaderViewModel @Inject constructor(
 
     override fun onCleared() {
         closeBookUseCase()
+        Log.d(LOG_TAG, "Book closed")
+    }
+
+    private companion object {
+        const val LOG_TAG = "READER"
     }
 }
