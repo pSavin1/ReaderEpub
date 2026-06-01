@@ -10,12 +10,18 @@ import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import com.example.reader.presentation.EpubReaderScreen
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
+
+    @Inject
+    lateinit var metric: Metric
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(null)
         enableEdgeToEdge()
+        metric.init()
         setContent {
             MaterialTheme {
                 Scaffold { paddingValues ->

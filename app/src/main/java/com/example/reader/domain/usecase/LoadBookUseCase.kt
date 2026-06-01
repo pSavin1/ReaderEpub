@@ -7,5 +7,5 @@ import javax.inject.Inject
 class LoadBookUseCase @Inject constructor(
     private val epubRepository: EpubRepository
 ) {
-    operator fun invoke(epubFile: File?) = epubRepository.loadEpubPublication(epubFile)
+    suspend operator fun invoke(epubFile: File?) = epubRepository.loadEpubPublication(epubFile)
 }

@@ -2,6 +2,7 @@ package com.example.reader.presentation
 
 import android.view.View
 import android.widget.FrameLayout
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,7 +32,7 @@ import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 
 @Composable
-fun FragmentActivity.EpubReaderScreen(
+fun EpubReaderScreen(
     modifier: Modifier = Modifier,
     viewModel: EpubReaderViewModel = hiltViewModel(),
 ) {
@@ -96,7 +97,7 @@ fun EpubReaderScreenLoading(
 
 @OptIn(ExperimentalReadiumApi::class)
 @Composable
-private fun FragmentActivity.EpubReaderScreenContent(
+private fun EpubReaderScreenContent(
     modifier: Modifier = Modifier,
     publication: Publication,
     initialLocator: Locator?,
@@ -106,6 +107,7 @@ private fun FragmentActivity.EpubReaderScreenContent(
     val navigatorFactory = remember(publication) {
         EpubNavigatorFactory(publication)
     }
+    val activity = (LocalActivity.current as FragmentActivity)
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -122,7 +124,7 @@ private fun FragmentActivity.EpubReaderScreenContent(
                 }
             },
             update = { view ->
-                val fragmentManager = supportFragmentManager
+                val fragmentManager = activity.supportFragmentManager
                 fragmentManager.fragmentFactory = navigatorFactory.createFragmentFactory(
                     initialLocator = initialLocator,
                     paginationListener = object : EpubNavigatorFragment.PaginationListener {
@@ -144,7 +146,7 @@ private fun FragmentActivity.EpubReaderScreenContent(
                     }
                 )
                 val fragment = fragmentManager.fragmentFactory.instantiate(
-                    classLoader,
+                    activity.classLoader,
                     EpubNavigatorFragment::class.java.name
                 )
                 if (fragmentManager.findFragmentById(view.id) == null) {
