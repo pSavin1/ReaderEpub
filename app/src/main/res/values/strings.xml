@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">ReaderEpub</string>
+    <string name="error_message">Произошла ошибка</string>
 </resources>

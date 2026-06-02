@@ -13,17 +13,21 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
-import androidx.fragment.app.commit
+import androidx.fragment.app.commitNow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.reader.Const.BOOK_FILE_NAME
+import com.example.reader.R
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
@@ -37,7 +41,7 @@ fun EpubReaderScreen(
     viewModel: EpubReaderViewModel = hiltViewModel(),
 ) {
     LaunchedEffect(Unit) {
-        viewModel.onLoadBook("ebook.demo.epub")
+        viewModel.onLoadBook(fileName = BOOK_FILE_NAME)
     }
 
     val state = viewModel.state.collectAsStateWithLifecycle()
@@ -51,6 +55,7 @@ fun EpubReaderScreen(
         state.value.isError -> {
             EpubReaderScreenError(
                 modifier = modifier,
+                errorText = stringResource(R.string.error_message),
             )
         }
         state.value.publication != null -> {
@@ -65,6 +70,7 @@ fun EpubReaderScreen(
         else -> {
             EpubReaderScreenError(
                 modifier = modifier,
+                errorText = stringResource(R.string.error_message),
             )
         }
     }
@@ -74,7 +80,7 @@ fun EpubReaderScreen(
 @Composable
 fun EpubReaderScreenError(
     modifier: Modifier,
-    errorText: String = "Произошла ошибка",
+    errorText: String,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         Text(
@@ -104,30 +110,20 @@ private fun EpubReaderScreenContent(
     progress: Double,
     onPageChanged: (Locator) -> Unit,
 ) {
+    val activity = LocalActivity.current as FragmentActivity
+    val containerId = remember {
+        View.generateViewId()
+    }
     val navigatorFactory = remember(publication) {
         EpubNavigatorFactory(publication)
     }
-    val activity = (LocalActivity.current as FragmentActivity)
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        AndroidView(
-            modifier = Modifier.weight(1f),
-            factory = { context ->
-                FragmentContainerView(context).apply {
-                    id = View.generateViewId()
-                    layoutParams = FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                    )
-                }
-            },
-            update = { view ->
-                val fragmentManager = activity.supportFragmentManager
-                fragmentManager.fragmentFactory = navigatorFactory.createFragmentFactory(
-                    initialLocator = initialLocator,
-                    paginationListener = object : EpubNavigatorFragment.PaginationListener {
+    DisposableEffect(publication) {
+        val fragmentManager = activity.supportFragmentManager
+        fragmentManager.fragmentFactory =
+            navigatorFactory.createFragmentFactory(
+                initialLocator = initialLocator,
+                paginationListener =
+                    object : EpubNavigatorFragment.PaginationListener {
                         override fun onPageChanged(
                             pageIndex: Int,
                             totalPages: Int,
@@ -137,28 +133,55 @@ private fun EpubReaderScreenContent(
                             onPageChanged(locator)
                         }
                     },
-                    initialPreferences = EpubPreferences(
-                        scroll = true
-                    ),
-                    configuration = EpubNavigatorFragment.Configuration.invoke {
+                initialPreferences = EpubPreferences(
+                    scroll = true
+                ),
+                configuration =
+                    EpubNavigatorFragment.Configuration {
                         disablePageTurnsWhileScrolling = false
                         shouldApplyInsetsPadding = true
                     }
-                )
-                val fragment = fragmentManager.fragmentFactory.instantiate(
+            )
+        if (fragmentManager.findFragmentById(containerId) == null) {
+            val fragment =
+                fragmentManager.fragmentFactory.instantiate(
                     activity.classLoader,
                     EpubNavigatorFragment::class.java.name
                 )
-                if (fragmentManager.findFragmentById(view.id) == null) {
-                    fragmentManager.commit {
-                        replace(view.id, fragment)
-                    }
+            fragmentManager.commitNow {
+                replace(containerId, fragment)
+            }
+        }
+        onDispose {
+            fragmentManager.findFragmentById(containerId)
+                ?.let { fragment ->
+                    fragmentManager.beginTransaction()
+                        .remove(fragment)
+                        .commitNowAllowingStateLoss()
+                }
+        }
+    }
+    Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AndroidView(
+            modifier = Modifier.weight(1f),
+            factory = { context ->
+                FragmentContainerView(context).apply {
+                    id = containerId
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    )
                 }
             }
         )
         LinearProgressIndicator(
             progress = { progress.toFloat() },
-            modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .fillMaxWidth(),
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
