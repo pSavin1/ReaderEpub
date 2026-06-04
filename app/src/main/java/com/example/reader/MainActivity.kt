@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
+import com.example.reader.metric.MetricImpl
 import com.example.reader.presentation.EpubReaderScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -16,7 +17,7 @@ import javax.inject.Inject
 class MainActivity : FragmentActivity() {
 
     @Inject
-    lateinit var metric: Metric
+    lateinit var metric: MetricImpl
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(null)

@@ -1,22 +1,25 @@
-package com.example.reader
+package com.example.reader.metric
 
 import android.util.Log
-import com.example.reader.Const.LOG_TAG
 import javax.inject.Inject
 
-class Metric @Inject constructor() {
-    fun init() {
+class MetricImpl @Inject constructor(): Metric {
+    override fun init() {
         // Инициализация метрики
         Log.d(LOG_TAG, "Metric initialized")
     }
 
-    fun event(name: String, params: Map<String, Any> = emptyMap()) {
+    override fun event(name: String, params: Map<String, Any>) {
         // Отправка события
         Log.d(LOG_TAG, "Metric event sent: $name, params: $params")
     }
 
-    fun error(name: String, params: Map<String, Any> = emptyMap()) {
+    override fun error(name: String, params: Map<String, Any>) {
         // Отправка события ошибки
         Log.d(LOG_TAG, "Metric error sent: $name, params: $params")
+    }
+
+    private companion object {
+        const val LOG_TAG = "READER"
     }
 }

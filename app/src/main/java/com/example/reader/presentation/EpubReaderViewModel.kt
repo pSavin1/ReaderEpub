@@ -1,14 +1,13 @@
 package com.example.reader.presentation
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.reader.Const.LOG_TAG
-import com.example.reader.Metric
 import com.example.reader.domain.usecase.CloseBookUseCase
 import com.example.reader.domain.usecase.GetPageUseCase
 import com.example.reader.domain.usecase.LoadBookUseCase
 import com.example.reader.domain.usecase.SavePageUseCase
+import com.example.reader.logger.Logger
+import com.example.reader.metric.MetricImpl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +23,8 @@ class EpubReaderViewModel @Inject constructor(
     private val loadBookUseCase: LoadBookUseCase,
     private val closeBookUseCase: CloseBookUseCase,
     private val assetLoaderHelper: AssetLoaderHelper,
-    private val metric: Metric,
+    private val metric: MetricImpl,
+    private val logger: Logger,
 ): ViewModel() {
 
     private val _state = MutableStateFlow(EpubReaderState())
@@ -36,7 +36,7 @@ class EpubReaderViewModel @Inject constructor(
                 progress = locator.locations.totalProgression ?: 0.0,
             )
         }
-        Log.d(LOG_TAG, "Page changed")
+        logger.d("Page changed")
         metric.event("page_changed", mapOf("page" to locator.locations.position.toString()))
         savePageUseCase(locator)
     }
@@ -54,8 +54,8 @@ class EpubReaderViewModel @Inject constructor(
             } else {
                 val publication = loadBookUseCase(assetFile)
                 if (publication != null) {
-                    Log.d(LOG_TAG, "Book file parsed")
-                    metric.event("book_opened")
+                    logger.d("Book file parsed")
+                    metric.event("book_opened", emptyMap())
                     _state.update {
                         it.copy(
                             publication = publication,
@@ -63,7 +63,7 @@ class EpubReaderViewModel @Inject constructor(
                     }
                     try {
                         val locator = getPageUseCase()
-                        Log.d(LOG_TAG, "Page loaded")
+                        logger.d("Page loaded")
                         _state.update {
                             it.copy(
                                 initialLocator = locator,
@@ -71,16 +71,19 @@ class EpubReaderViewModel @Inject constructor(
                             )
                         }
                     } catch (e: Exception) {
-                        Log.d(LOG_TAG, "Page loading error")
-                        metric.error("page_loading_error: ${e.localizedMessage}")
+                        logger.d("Page loading error")
+                        metric.error(
+                            "page_loading_error",
+                            mapOf("error" to e.localizedMessage.orEmpty())
+                        )
                         e.printStackTrace()
                     }
                     _state.update {
                         it.copy(isLoading = false)
                     }
                 } else {
-                    Log.d(LOG_TAG, "Publication loading error")
-                    metric.error("book_loading_error")
+                    logger.d("Publication loading error")
+                    metric.error("book_loading_error", mapOf("error" to "Publication is null"))
                     _state.update {
                         it.copy(isError = true)
                     }
@@ -91,7 +94,7 @@ class EpubReaderViewModel @Inject constructor(
 
     override fun onCleared() {
         closeBookUseCase()
-        Log.d(LOG_TAG, "Book closed")
-        metric.event("book_closed")
+        logger.d("Book closed")
+        metric.event("book_closed", emptyMap())
     }
 }

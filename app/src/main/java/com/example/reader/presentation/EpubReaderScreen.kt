@@ -26,7 +26,6 @@ import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.commitNow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.reader.Const.BOOK_FILE_NAME
 import com.example.reader.R
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
@@ -41,7 +40,7 @@ fun EpubReaderScreen(
     viewModel: EpubReaderViewModel = hiltViewModel(),
 ) {
     LaunchedEffect(Unit) {
-        viewModel.onLoadBook(fileName = BOOK_FILE_NAME)
+        viewModel.onLoadBook(fileName = "ebook.demo.epub")
     }
 
     val state = viewModel.state.collectAsStateWithLifecycle()
