@@ -2,6 +2,7 @@ package com.example.reader.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.reader.data.AssetLoaderHelper
 import com.example.reader.domain.usecase.CloseBookUseCase
 import com.example.reader.domain.usecase.GetPageUseCase
 import com.example.reader.domain.usecase.LoadBookUseCase
@@ -22,7 +23,6 @@ class EpubReaderViewModel @Inject constructor(
     private val savePageUseCase: SavePageUseCase,
     private val loadBookUseCase: LoadBookUseCase,
     private val closeBookUseCase: CloseBookUseCase,
-    private val assetLoaderHelper: AssetLoaderHelper,
     private val metric: MetricImpl,
     private val logger: Logger,
 ): ViewModel() {
@@ -46,47 +46,44 @@ class EpubReaderViewModel @Inject constructor(
             it.copy(isLoading = true)
         }
         viewModelScope.launch {
-            val assetFile = assetLoaderHelper.loadAsset(fileName)
-            if (assetFile == null) {
+            val publication = loadBookUseCase(fileName)
+
+            if (publication != null) {
+                logger.d("Book file parsed")
+                metric.event("book_opened", emptyMap())
+
+                val locator = try {
+                    val result = getPageUseCase()
+                    logger.d("Page loaded")
+                    result
+                } catch (e: Exception) {
+                    logger.d("Page loading error")
+                    metric.error(
+                        "page_loading_error",
+                        mapOf("error" to e.localizedMessage.orEmpty())
+                    )
+                    e.printStackTrace()
+                    null
+                }
                 _state.update {
-                    it.copy(isError = true)
+                    it.copy(
+                        publication = publication,
+                        initialLocator = locator,
+                        progress = locator?.locations?.totalProgression ?: 0.0,
+                        isLoading = false,
+                    )
                 }
             } else {
-                val publication = loadBookUseCase(assetFile)
-                if (publication != null) {
-                    logger.d("Book file parsed")
-                    metric.event("book_opened", emptyMap())
-                    _state.update {
-                        it.copy(
-                            publication = publication,
-                        )
-                    }
-                    try {
-                        val locator = getPageUseCase()
-                        logger.d("Page loaded")
-                        _state.update {
-                            it.copy(
-                                initialLocator = locator,
-                                progress = locator?.locations?.totalProgression ?: 0.0,
-                            )
-                        }
-                    } catch (e: Exception) {
-                        logger.d("Page loading error")
-                        metric.error(
-                            "page_loading_error",
-                            mapOf("error" to e.localizedMessage.orEmpty())
-                        )
-                        e.printStackTrace()
-                    }
-                    _state.update {
-                        it.copy(isLoading = false)
-                    }
-                } else {
-                    logger.d("Publication loading error")
-                    metric.error("book_loading_error", mapOf("error" to "Publication is null"))
-                    _state.update {
-                        it.copy(isError = true)
-                    }
+                logger.d("Publication loading error")
+                metric.error("book_loading_error", mapOf("error" to "Publication is null"))
+                _state.update {
+                    it.copy(
+                        isError = true,
+                        isLoading = false,
+                        publication = null,
+                        initialLocator = null,
+                        progress = 0.0,
+                    )
                 }
             }
         }

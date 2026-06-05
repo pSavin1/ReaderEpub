@@ -1,4 +1,4 @@
-package com.example.reader.presentation
+package com.example.reader.data
 
 import android.content.Context
 import com.example.reader.logger.Logger
