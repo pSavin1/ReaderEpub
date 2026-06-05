@@ -66,12 +66,6 @@ fun EpubReaderScreen(
                 progress = state.value.progress,
             )
         }
-        else -> {
-            EpubReaderScreenError(
-                modifier = modifier,
-                errorText = stringResource(R.string.error_message),
-            )
-        }
     }
 
 }
