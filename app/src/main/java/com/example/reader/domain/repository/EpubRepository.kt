@@ -4,6 +4,6 @@ import org.readium.r2.shared.publication.Publication
 import java.io.File
 
 interface EpubRepository {
-    suspend fun loadEpubPublication(epubFile: File?): Publication?
+    suspend fun loadEpubPublication(fileName: String): Publication?
     fun closePublication()
 }

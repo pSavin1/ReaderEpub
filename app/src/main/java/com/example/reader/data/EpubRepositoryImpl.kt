@@ -6,39 +6,38 @@ import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.streamer.PublicationOpener
-import java.io.File
 import javax.inject.Inject
 
 class EpubRepositoryImpl @Inject constructor(
     private val assetRetriever: AssetRetriever,
     private val publicationOpener: PublicationOpener,
+    private val assetLoaderHelper: AssetLoaderHelper,
 ): EpubRepository {
 
     private var publication: Publication? = null
+    private var fileName: String? = null
 
-    override suspend fun loadEpubPublication(epubFile: File?): Publication? =
+    override suspend fun loadEpubPublication(fileName: String): Publication? =
         withContext(Dispatchers.IO) {
-            if (publication != null) {
-                publication
+            if (fileName == this@EpubRepositoryImpl.fileName && publication != null) {
+                return@withContext publication
             }
-            if (epubFile == null) {
-                null
-            } else {
-                val asset = assetRetriever.retrieve(epubFile)
-                when {
-                    asset.isSuccess -> {
-                        publication = publicationOpener.open(
-                            asset = asset.getOrNull() ?: return@withContext null,
-                            allowUserInteraction = true
-                        ).getOrNull()
-                        publication
-                    }
-                    else -> null
-                }
+            this@EpubRepositoryImpl.fileName = fileName
+            val epubFile = assetLoaderHelper.loadAsset(fileName)
+            val resultAsset = epubFile?.let { assetRetriever.retrieve(it) }
+            resultAsset?.onSuccess {
+                publication = publicationOpener.open(
+                    asset = it,
+                    allowUserInteraction = true
+                ).getOrNull()
+                return@withContext publication
             }
+            null
         }
 
     override fun closePublication() {
         publication?.close()
+        publication = null
+        fileName = null
     }
 }
